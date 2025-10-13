@@ -1,0 +1,5 @@
+2. Copy the connection string, then open MongoDB Compass
+
+Show Password
+Use this connection string in your application
+mongodb+srv://kelvindutra_db_user:SBz44XrTTb2EOydU@agendaupday.1bzutwd.mongodb.net/
