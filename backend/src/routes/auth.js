@@ -6,7 +6,7 @@ const User = require('../models/User'); // Importa o modelo User
 // ROTA: POST /api/auth/register (Cadastro de Usuário)
 router.post('/register', async (req, res) => {
     // 1. Desestruturar os dados do corpo da requisição
-    const { name, email, password } = req.body;
+    const { nome, email, senha } = req.body;
 
     try {
         // 2. Verificar se o usuário já existe
@@ -18,22 +18,22 @@ router.post('/register', async (req, res) => {
 
         // 3. Criar uma nova instância do usuário (sem salvar ainda)
         user = new User({
-            name,
-            email,
-            password
+            name: nome,
+            email: email,
+            password: senha
         });
 
         // 4. Gerar um salt e fazer o hash da senha
         // O salt é o fator de segurança para a criptografia.
         const salt = await bcrypt.genSalt(10);
         
-        // A senha criptografada será salva no banco (conforme artefato 1)
-        user.password = await bcrypt.hash(password, salt);
+        // 5. A senha criptografada será salva no banco (conforme artefato 1)
+        user.password = await bcrypt.hash(senha, salt);
 
-        // 5. Salvar o usuário no MongoDB
+        // 6. Salvar o usuário no MongoDB
         await user.save();
 
-        // 6. Resposta de Sucesso
+        // 7. Resposta de Sucesso
         res.status(201).json({ 
             msg: 'Usuário registrado com sucesso!', 
             userId: user._id 
@@ -49,7 +49,7 @@ const jwt = require('jsonwebtoken'); // Importa o JWT
 
 // ROTA: POST /api/auth/login (Login de Usuário)
 router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+    const { email, senha } = req.body;
 
     try {
         // 1. Verificar se o usuário existe
@@ -63,7 +63,7 @@ router.post('/login', async (req, res) => {
 
         // 2. Comparar a senha fornecida com o hash armazenado
         // bcrypt.compare() faz o hashing da senha digitada e compara com o hash salvo
-        const isMatch = await bcrypt.compare(password, user.password);
+        const isMatch = await bcrypt.compare(senha, user.password);
 
         if (!isMatch) {
             return res.status(400).json({ msg: 'Credenciais inválidas.' });
