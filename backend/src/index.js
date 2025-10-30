@@ -1,6 +1,7 @@
 // src/index.js - Foco em Inicialização e Orquestração
 const express = require('express');
 const dotenv = require('dotenv');
+const cors = require('cors');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth'); // Já importa a rota de autenticação
 const eventsRoutes = require('./routes/events'); // 💡 IMPORTAÇÃO DO NOVO ARQUIVO DE ROTAS
@@ -20,8 +21,9 @@ const startServer = async () => {
         await connectDB();
 
         // 2. Middlewares Globais
+        app.use(cors()); //ativa o cors antes das rotas
         // Permite que o servidor entenda requisições no formato JSON
-        app.use(express.json());
+        app.use(express.json({extended: false}));//processa dados json
 
         // 3. Definição das Rotas
         // Rota Raiz (Check de status)
