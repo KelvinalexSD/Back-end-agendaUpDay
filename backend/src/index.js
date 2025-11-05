@@ -5,7 +5,7 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth'); // Já importa a rota de autenticação
 const eventsRoutes = require('./routes/events'); // 💡 IMPORTAÇÃO DO NOVO ARQUIVO DE ROTAS
-const startNotificationScheduler = require('./services/notificationService'); 
+const startNotificationScheduler = require('./services/notificationScheduler'); 
 
 
 // Carrega variáveis de ambiente

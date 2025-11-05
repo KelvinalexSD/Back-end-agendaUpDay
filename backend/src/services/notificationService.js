@@ -1,52 +1,69 @@
-const cron = require('node-cron');
-const Event = require('../models/Event');
+const nodemailer = require('nodemailer');
 
-// Define a antecedência em horas para a notificação (ex: 24 horas antes)
-const ADVANCE_TIME_HOURS = 24; 
+// 1. Configurar o Transportador para Outlook/Office 365
+// Ele usará as variáveis EMAIL_USER e EMAIL_PASS (Senha de Aplicativo) do .env
+const transporter = nodemailer.createTransport({
+    host: 'smtp.office365.com', // Servidor SMTP oficial do Outlook/Office 365
+    port: 587, // Porta padrão segura para STARTTLS
+    secure: false, // Use 'false' para a porta 587
+    auth: {
+        user: process.env.EMAIL_USER, // Seu e-mail dedicado
+        pass: process.env.EMAIL_PASS, // Sua Senha de Aplicativo (App Password)
+    },
+    tls: {
+        ciphers: 'SSLv3' 
+    }
+});
 
-const startNotificationScheduler = () => {
-    // Agenda uma tarefa para rodar a CADA MINUTO. 
-    // Em produção, isso pode ser ajustado para rodar a cada 5 ou 10 minutos.
-    cron.schedule('* * * * *', async () => {
-        console.log('--- Executando checagem de eventos para notificação ---');
-        
-        const now = new Date();
-        // Define o limite de tempo: agora + 24 horas
-        const limitTime = new Date(now.getTime() + ADVANCE_TIME_HOURS * 60 * 60 * 1000);
+/**
+ * Envia um e-mail de notificação de evento.
+ * Requer que o objeto 'user' tenha o campo 'email'.
+ * @param {Object} user - Objeto do usuário (deve conter o campo 'email' e 'name').
+ * @param {Object} event - Objeto do evento.
+ */
+async function sendEventNotificationEmail(user, event) {
+    // Validação básica
+    if (!user || !user.email) {
+        console.warn(`Aviso: Usuário associado ao evento ${event._id} não possui e-mail válido.`);
+        return;
+    }
 
-        try {
-            // Busca eventos que:
-            // 1. Estão no futuro, mas antes do nosso limite de 24h
-            // 2. A flag notificationSent é 'false'
-            const eventsToNotify = await Event.find({
-                date: {
-                    $gt: now, // Maior que a data atual (no futuro)
-                    $lte: limitTime // Menor ou igual ao limite (dentro da janela de 24h)
-                },
-                notificationSent: false
-            });
-
-            if (eventsToNotify.length > 0) {
-                console.log(`[ALERTA] Encontrados ${eventsToNotify.length} eventos para notificar!`);
-                
-                // SIMULAÇÃO DO ENVIO DA NOTIFICAÇÃO
-                for (const event of eventsToNotify) {
-                    // Onde a lógica de envio de Email/SMS/Telegram seria inserida.
-                    console.log(`Simulando envio de notificação para o usuário ${event.userId} sobre: ${event.title}`);
-                    
-                    // IMPORTANTE: Marca o evento como notificado para não enviar de novo
-                    await Event.findByIdAndUpdate(event._id, { notificationSent: true });
-                }
-            } else {
-                console.log('Nenhum evento pendente para notificação.');
-            }
-
-        } catch (error) {
-            console.error('Erro no agendador de notificações:', error.message);
-        }
+    // Formatação da data e hora para o corpo do e-mail
+    const eventDate = new Date(event.date).toLocaleString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit',
     });
 
-    console.log('Agendador de notificações iniciado.');
-};
+    const mailOptions = {
+        from: `"AgendaUpday" <${process.env.EMAIL_USER}>`,
+        to: user.email,
+        subject: `Lembrete: Seu evento "${event.title}" está próximo!`,
+        html: `
+            <h1>Lembrete de Evento</h1>
+            <p>Olá ${user.name || 'usuário'},</p>
+            <p>Seu evento <b>${event.title}</b> está agendado para:</p>
+            
+            <p>📅 <b>Data e Hora:</b> ${eventDate}</p>
+            <p>⏳ <b>Duração:</b> ${event.duration} minutos</p>
+            <p>📌 <b>Descrição:</b> ${event.description || 'Nenhuma descrição fornecida.'}</p>
+            
+            <p>Atenciosamente, AgendaUpday Team.</p>
+        `,
+    };
 
-module.exports = startNotificationScheduler;
+    try {
+        let info = await transporter.sendMail(mailOptions);
+        console.log(`✅ E-mail de notificação enviado para ${user.email}. ID: ${info.messageId}`);
+    } catch (error) {
+        console.error('❌ ERRO ao enviar e-mail de notificação:', error);
+    }
+}
+
+module.exports = {
+    sendEventNotificationEmail,
+};
